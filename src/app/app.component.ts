@@ -2,19 +2,15 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   FormControl,
   NonNullableFormBuilder,
-  Validators
+  Validators,
 } from '@angular/forms';
-import {
-  ignoreElements, merge, Subject,
-  takeUntil,
-  tap
-} from 'rxjs';
+import { ignoreElements, merge, Subject, takeUntil, tap } from 'rxjs';
 import { FormService } from './form.service';
 
 interface Form {
   email: FormControl<string>;
   password: FormControl<string>;
-  shouldSaveInfo: FormControl<boolean>;
+  shouldSaveInfo: FormControl<boolean>
 }
 
 @Component({
@@ -54,7 +50,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.form.valid) {
       const formValues = this.form.getRawValue()
       const formValuesStringified = JSON.stringify(formValues);
-      if (formValues.shouldSaveInfo) {
+      if(formValues.shouldSaveInfo){
         localStorage.setItem('userInfo', formValuesStringified);
       }
       this.userInfo = formValuesStringified;
@@ -68,13 +64,16 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.form.controls[control].statusChanges.pipe(
       tap(() => {
         Object.assign(this.errors, { [control]: '' });
-      }),
+      })
     );
   }
 
   initializeForm() {
     const userInfo = localStorage.getItem('userInfo') ?? '';
-    const userInfoStringified = JSON.parse(userInfo);
+    let userInfoStringified : any = {}
+    if(userInfo !== ''){
+      userInfoStringified = JSON.parse(userInfo)
+    }
     return this.fb.group<Form>({
       email: this.fb.control(userInfoStringified.email, [
         Validators.required,
@@ -84,7 +83,7 @@ export class AppComponent implements OnInit, OnDestroy {
         Validators.required,
         Validators.minLength(5),
       ]),
-      shouldSaveInfo: this.fb.control(false),
+      shouldSaveInfo: this.fb.control(false)
     });
   }
 
