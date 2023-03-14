@@ -1,6 +1,21 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { NonNullableFormBuilder, Validators } from '@angular/forms';
-import { ignoreElements, merge, Subject, takeUntil, tap } from 'rxjs';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  FormControl,
+  NonNullableFormBuilder,
+  Validators
+} from '@angular/forms';
+import {
+  ignoreElements, merge, Subject,
+  takeUntil,
+  tap
+} from 'rxjs';
+import { FormService } from './form.service';
+
+interface Form {
+  email: FormControl<string>;
+  password: FormControl<string>;
+  shouldSaveInfo: FormControl<boolean>;
+}
 
 @Component({
   selector: 'app-root',
@@ -10,75 +25,66 @@ import { ignoreElements, merge, Subject, takeUntil, tap } from 'rxjs';
 export class AppComponent implements OnInit, OnDestroy {
   title = 'demo-angular';
 
-  fb = inject(NonNullableFormBuilder);
   form = this.initializeForm();
   userInfo = '';
 
   errors = {
     email: '',
     password: '',
-    minlength: '',
   };
 
   private subscriptionManager$ = new Subject<void>();
 
+  constructor(
+    public fb: NonNullableFormBuilder,
+    public formService: FormService
+  ) {}
+
   ngOnInit(): void {
     const formControlsChange$ = Object.keys(this.form.controls).map((key) =>
-      this.resetFormControlOnChange(key)
+      this.resetFormControlOnChange(key as keyof Form)
     );
+
     merge(...formControlsChange$)
       .pipe(ignoreElements(), takeUntil(this.subscriptionManager$))
       .subscribe();
   }
 
-  mapErrors(formControl: string) {
-    const ERROR_TEXT = {
-      required: 'This field must be filled.',
-      email: 'This field must be an email.',
-      minlength: 'This field must include 5 characters.',
-    };
-    return formControl
-      ? ERROR_TEXT[formControl as keyof typeof ERROR_TEXT]
-      : '';
-  }
-
   onSubmit() {
     if (this.form.valid) {
-      this.userInfo = JSON.stringify(this.form.getRawValue());
+      const formValues = this.form.getRawValue()
+      const formValuesStringified = JSON.stringify(formValues);
+      if (formValues.shouldSaveInfo) {
+        localStorage.setItem('userInfo', formValuesStringified);
+      }
+      this.userInfo = formValuesStringified;
       return;
     }
-    const errors = this.getErrorsFromControls(this.form.controls);
+    const errors = this.formService.getErrorsFromControls(this.form.controls);
     this.errors = errors as typeof this.errors;
   }
 
-  resetFormControlOnChange(control: any) {
-    const _control = control as keyof typeof this.form.controls;
-    return this.form.controls[_control].valueChanges.pipe(
-      tap(() => (this.errors[_control] = ''))
+  resetFormControlOnChange(control: keyof Form) {
+    return this.form.controls[control].statusChanges.pipe(
+      tap(() => {
+        Object.assign(this.errors, { [control]: '' });
+      }),
     );
   }
 
-  getErrorsFromControls(controls: any) {
-    const formControlKeys = Object.keys(controls);
-    const errors = formControlKeys.reduce((acc, cur) => {
-      const formControlError = controls[cur as keyof typeof controls].errors;
-      let errorKey = '';
-      if (formControlError) {
-        errorKey = Object.keys(formControlError)[0];
-      }
-      const errorKeyToText = this.mapErrors(errorKey);
-      return { ...acc, [cur]: errorKeyToText };
-    }, {});
-    return errors;
-  }
-
   initializeForm() {
-    return this.fb.group({
-      email: this.fb.control('', [Validators.required, Validators.email]),
-      password: this.fb.control('', [
+    const userInfo = localStorage.getItem('userInfo') ?? '';
+    const userInfoStringified = JSON.parse(userInfo);
+    return this.fb.group<Form>({
+      email: this.fb.control(userInfoStringified.email, [
+        Validators.required,
+        Validators.email,
+      ]),
+      password: this.fb.control(userInfoStringified.password, [
         Validators.required,
         Validators.minLength(5),
       ]),
+      shouldSaveInfo: this.fb.control(false),
     });
   }
 
