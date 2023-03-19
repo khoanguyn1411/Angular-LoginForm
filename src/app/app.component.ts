@@ -76,7 +76,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     return this.fb.group<Form>({
       email: this.fb.control(userInfoStringified.email, [
-        Validators.required,
+        this.formService.isRequired("Bạn chưa nhập email."),
         Validators.email,
       ]),
       password: this.fb.control(userInfoStringified.password, [
