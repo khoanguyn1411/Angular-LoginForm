@@ -16,6 +16,8 @@ const READABLE_VALIDATION_ERRORS = {
     `This field must include ${requiredLength} characters. Found only ${actualLength}`,
 };
 
+export type FormErrors<T extends Record<string, any>> = Record<keyof T, string>;
+
 function mapErrors(formControlError: ValidationErrors | null) {
   if (formControlError) {
     const formControlKey = Object.keys(
@@ -27,22 +29,23 @@ function mapErrors(formControlError: ValidationErrors | null) {
   return '';
 }
 
-export function getErrorsFromControls<T extends FormControlsFor<Record<string, any>>>(
-  controls: T
-): Record<keyof T, string> {
+export function getErrorsFromControls<
+  T extends FormControlsFor<Record<string, any>>
+>(controls: T): FormErrors<T> {
   const formControlKeys = Object.keys(controls);
   const errors = formControlKeys.reduce((acc, cur) => {
     const formControlError = controls[cur].errors;
     const errorKeyToText = mapErrors(formControlError);
     return { ...acc, [cur]: errorKeyToText };
   }, {});
-  return errors as Record<keyof T, string>;
+  return errors as FormErrors<T>;
 }
 
 function resetFormControlOnChange<
-  T extends FormControlsFor<Record<string, any>>
+  E extends Record<string, any>,
+  T extends FormControlsFor<E>
 >(
-  formErrors$: BehaviorSubject<Record<keyof T, string>>,
+  formErrors$: BehaviorSubject<FormErrors<E>>,
   form: FormGroup<T>,
   control: keyof T
 ): Observable<void> {
@@ -58,9 +61,10 @@ function resetFormControlOnChange<
 }
 
 export function createFormControlsChangeSideEffects<
-  T extends FormControlsFor<Record<string, any>>
+  E extends Record<string, any>,
+  T extends FormControlsFor<E>
 >(
-  formErrors$: BehaviorSubject<Record<keyof T, string>>,
+  formErrors$: BehaviorSubject<FormErrors<E>>,
   form: FormGroup<T>
 ): Observable<void>[] {
   return Object.keys(form.controls).map((key) =>

@@ -12,6 +12,7 @@ import { AppValidator } from 'src/utils/app-validators';
 import { FormControlsFor } from 'src/utils/types/form-control';
 import {
   createFormControlsChangeSideEffects,
+  FormErrors,
   getErrorsFromControls,
 } from 'src/utils/form-validation';
 
@@ -24,9 +25,11 @@ type LoginForm = FormControlsFor<LoginInfo>;
 })
 export class AppComponent implements OnInit, OnDestroy {
   protected readonly form: FormGroup<LoginForm> = this.initializeForm();
-  protected readonly formErrors$ = new BehaviorSubject<
-    Record<keyof LoginInfo, string>
-  >({ email: '', password: '', shouldSaveInfo: '' });
+  protected readonly formErrors$ = new BehaviorSubject<FormErrors<LoginInfo>>({
+    email: '',
+    password: '',
+    shouldSaveInfo: '',
+  });
 
   private readonly subscriptionManager$ = new Subject<void>();
 
