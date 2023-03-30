@@ -18,7 +18,7 @@ const READABLE_VALIDATION_ERRORS = {
 
 export type FormErrors<T extends Record<string, any>> = Record<keyof T, string>;
 
-function mapErrors(formControlError: ValidationErrors | null) {
+function mapErrors(formControlError: ValidationErrors | null): string {
   if (formControlError) {
     const formControlKey = Object.keys(
       formControlError
