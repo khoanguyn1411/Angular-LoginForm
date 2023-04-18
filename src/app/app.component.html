@@ -1,12 +1,18 @@
-<form [formGroup]="form" class="form" (submit)="onSubmit()">
+<form
+  *ngIf="{
+    errors: formErrors$ | async
+  } as data"
+  [formGroup]="form"
+  class="form"
+  (submit)="onSubmit()"
+>
   <input formControlName="email" placeholder="Email" />
-  <span>{{ errors.email }}</span>
+  <span>{{ data.errors?.email }}</span>
   <input formControlName="password" placeholder="Password" />
-  <span>{{ errors.password }}</span>
+  <span>{{ data.errors?.password }}</span>
   <label>
     <input formControlName="shouldSaveInfo" type="checkbox" />
     Save information
   </label>
   <button type="submit">Submit</button>
-  {{ userInfo }}
 </form>

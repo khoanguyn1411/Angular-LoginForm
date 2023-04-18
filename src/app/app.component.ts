@@ -1,17 +1,22 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormGroup, NonNullableFormBuilder, Validators } from '@angular/forms';
 import {
-  FormControl,
-  NonNullableFormBuilder,
-  Validators,
-} from '@angular/forms';
-import { ignoreElements, merge, Subject, takeUntil, tap } from 'rxjs';
-import { FormService } from './form.service';
+  BehaviorSubject,
+  ignoreElements,
+  merge,
+  Subject,
+  takeUntil,
+} from 'rxjs';
+import { LoginInfo } from 'src/models/LoginInfo';
+import { AppValidator } from 'src/utils/app-validators';
+import { FormControlsFor } from 'src/utils/types/form-control';
+import {
+  createFormControlsChangeSideEffects,
+  FormErrors,
+  getErrorsFromControls,
+} from 'src/utils/form-validation';
 
-interface Form {
-  email: FormControl<string>;
-  password: FormControl<string>;
-  shouldSaveInfo: FormControl<boolean>
-}
+type LoginForm = FormControlsFor<LoginInfo>;
 
 @Component({
   selector: 'app-root',
@@ -19,26 +24,21 @@ interface Form {
   styleUrls: ['./app.component.css'],
 })
 export class AppComponent implements OnInit, OnDestroy {
-  title = 'demo-angular';
-
-  form = this.initializeForm();
-  userInfo = '';
-
-  errors = {
+  protected readonly form: FormGroup<LoginForm> = this.initializeForm();
+  protected readonly formErrors$ = new BehaviorSubject<FormErrors<LoginInfo>>({
     email: '',
     password: '',
-  };
+    shouldSaveInfo: '',
+  });
 
-  private subscriptionManager$ = new Subject<void>();
+  private readonly subscriptionManager$ = new Subject<void>();
 
-  constructor(
-    public fb: NonNullableFormBuilder,
-    public formService: FormService
-  ) {}
+  constructor(public fb: NonNullableFormBuilder) {}
 
-  ngOnInit(): void {
-    const formControlsChange$ = Object.keys(this.form.controls).map((key) =>
-      this.resetFormControlOnChange(key as keyof Form)
+  public ngOnInit() {
+    const formControlsChange$ = createFormControlsChangeSideEffects(
+      this.formErrors$,
+      this.form
     );
 
     merge(...formControlsChange$)
@@ -46,48 +46,39 @@ export class AppComponent implements OnInit, OnDestroy {
       .subscribe();
   }
 
-  onSubmit() {
+  protected onSubmit() {
     if (this.form.valid) {
-      const formValues = this.form.getRawValue()
+      const formValues = this.form.getRawValue();
       const formValuesStringified = JSON.stringify(formValues);
-      if(formValues.shouldSaveInfo){
+      if (formValues.shouldSaveInfo) {
         localStorage.setItem('userInfo', formValuesStringified);
       }
-      this.userInfo = formValuesStringified;
       return;
     }
-    const errors = this.formService.getErrorsFromControls(this.form.controls);
-    this.errors = errors as typeof this.errors;
+    const errors = getErrorsFromControls(this.form.controls);
+    this.formErrors$.next(errors);
   }
 
-  resetFormControlOnChange(control: keyof Form) {
-    return this.form.controls[control].statusChanges.pipe(
-      tap(() => {
-        Object.assign(this.errors, { [control]: '' });
-      })
-    );
-  }
-
-  initializeForm() {
+  private initializeForm(): FormGroup<LoginForm> {
     const userInfo = localStorage.getItem('userInfo') ?? '';
-    let userInfoStringified : any = {}
-    if(userInfo !== ''){
-      userInfoStringified = JSON.parse(userInfo)
+    let userInfoStringified: any = {};
+    if (userInfo !== '') {
+      userInfoStringified = JSON.parse(userInfo);
     }
-    return this.fb.group<Form>({
+    return this.fb.group<LoginForm>({
       email: this.fb.control(userInfoStringified.email, [
-        Validators.required,
+        AppValidator.isRequired('Email is required.'),
         Validators.email,
       ]),
       password: this.fb.control(userInfoStringified.password, [
         Validators.required,
         Validators.minLength(5),
       ]),
-      shouldSaveInfo: this.fb.control(false)
+      shouldSaveInfo: this.fb.control(false),
     });
   }
 
-  ngOnDestroy(): void {
+  public ngOnDestroy(): void {
     this.subscriptionManager$.next();
     this.subscriptionManager$.complete();
   }
