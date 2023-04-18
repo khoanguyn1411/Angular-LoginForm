@@ -6,7 +6,7 @@ import { Injectable } from '@angular/core';
 export class FormService {
   mapErrors(formControl: string) {
     const ERROR_TEXT = {
-      required: 'This field must be filled.',
+      required: ' field must be filled.',
       email: 'This field must be an email.',
       minlength: 'This field must include 5 characters.',
     };
